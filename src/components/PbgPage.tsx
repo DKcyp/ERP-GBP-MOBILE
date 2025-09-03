@@ -83,16 +83,19 @@ const PbgPage: React.FC<PbgPageProps> = ({ onBack, onAddPbg }) => {
               {item.status}
             </span>
 
-            <h4 className="text-lg font-bold text-text mt-4 mb-2">{item.itemName}</h4>
+            {/* Item Name and Quantity/Unit on the same line */}
+            <div className="flex items-center justify-between mt-4 mb-4">
+              <h4 className="text-lg font-bold text-text">{item.itemName}</h4>
 
-            {/* Quantity and Unit */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg font-semibold text-sm">
-                {item.quantity}
-              </span>
-              <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg font-semibold text-sm">
-                {item.unit}
-              </span>
+              {/* Quantity and Unit */}
+              <div className="flex items-center gap-2">
+                <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg font-semibold text-sm">
+                  {item.quantity}
+                </span>
+                <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg font-semibold text-sm">
+                  {item.unit}
+                </span>
+              </div>
             </div>
 
             {/* Usage Description */}

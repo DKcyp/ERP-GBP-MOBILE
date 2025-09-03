@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import FormField from './FormField';
-import Button from './Button'; // Assuming Button component exists
+import Button from './Button';
+import Modal from './Modal'; // Import the new Modal component
 
 interface AddPbgPageProps {
   onBack: () => void;
@@ -35,6 +36,12 @@ const AddPbgPage: React.FC<AddPbgPageProps> = ({ onBack }) => {
     { kode: '', namaBarang: '', qty: '', satuan: '', keterangan: '' }, // Initial empty entry
   ]);
 
+  const [showModal, setShowModal] = useState(false);
+  const [modalContent, setModalContent] = useState({
+    title: '',
+    message: '',
+  });
+
   const handlePbgChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setPbgData((prev) => ({ ...prev, [id]: value }));
@@ -55,13 +62,44 @@ const AddPbgPage: React.FC<AddPbgPageProps> = ({ onBack }) => {
     setItemEntries((prev) => [...prev, { kode: '', namaBarang: '', qty: '', satuan: '', keterangan: '' }]);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConfirmSubmit = () => {
     console.log('PBG Data:', pbgData);
     console.log('Item Entries:', itemEntries);
-    // Here you would typically send this data to a backend
     alert('PBG data submitted! (Check console for details)');
+    setShowModal(false); // Close modal after submission
     onBack(); // Go back after submission
+  };
+
+  const handleCancelModal = () => {
+    setShowModal(false);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Check for stock issues
+    const stockIssueItem = itemEntries.find(item => {
+      if (item.stockInfo && item.qty !== '') {
+        const stockMatch = item.stockInfo.match(/\d+/);
+        const availableStock = stockMatch ? parseInt(stockMatch[0], 10) : 0;
+        return item.qty > availableStock;
+      }
+      return false;
+    });
+
+    if (stockIssueItem) {
+      // Found an item with stock issue, show modal
+      const stockMatch = stockIssueItem.stockInfo?.match(/\d+/);
+      const availableStock = stockMatch ? parseInt(stockMatch[0], 10) : 0;
+      setModalContent({
+        title: 'Notifikasi',
+        message: `Stok ${stockIssueItem.namaBarang} terbatas. Anda mengajukan ${stockIssueItem.qty} ${stockIssueItem.satuan}, namun stok tersedia hanya ${availableStock} ${stockIssueItem.satuan}. Pengiriman mungkin akan terlambat karena akan dilakukan pengajuan terlebih dahulu. Tetap ajukan?`,
+      });
+      setShowModal(true);
+    } else {
+      // No stock issues, proceed directly
+      handleConfirmSubmit();
+    }
   };
 
   return (
@@ -120,14 +158,12 @@ const AddPbgPage: React.FC<AddPbgPageProps> = ({ onBack }) => {
 
           <div className="mb-4">
             <label className="block text-text text-sm font-medium mb-2">Periode Pemakaian</label>
-            {/* Removed the flex container to stack date inputs vertically */}
             <FormField
               id="periodeStart"
               label="Start"
               type="date"
               value={pbgData.periodeStart}
               onChange={handlePbgChange}
-              // Removed containerClassName="flex-1" as it's no longer in a flex container
             />
             <FormField
               id="periodeEnd"
@@ -135,7 +171,6 @@ const AddPbgPage: React.FC<AddPbgPageProps> = ({ onBack }) => {
               type="date"
               value={pbgData.periodeEnd}
               onChange={handlePbgChange}
-              // Removed containerClassName="flex-1" as it's no longer in a flex container
             />
           </div>
 
@@ -186,9 +221,9 @@ const AddPbgPage: React.FC<AddPbgPageProps> = ({ onBack }) => {
                   type="number"
                   value={item.qty}
                   onChange={(e) => handleItemChange(index, e)}
-                  errorMessage={item.stockInfo ? '' : undefined} // Only show error if stockInfo is present
+                  errorMessage={item.stockInfo ? '' : undefined}
                   infoMessage={item.stockInfo}
-                  className={item.stockInfo ? 'border-error' : ''} // Red border for stock info
+                  className={item.stockInfo ? 'border-error' : ''}
                 />
                 <FormField
                   id={`satuan-${index}`}
@@ -216,12 +251,25 @@ const AddPbgPage: React.FC<AddPbgPageProps> = ({ onBack }) => {
             <Plus size={20} />
             Barang
           </Button>
+          <Button
+            type="submit"
+            className="bg-primary text-white p-3 rounded-xl w-full flex items-center justify-center gap-2 mt-4 shadow-md hover:bg-primary/90 transition-colors active:scale-95"
+          >
+            Simpan
+          </Button>
         </div>
-
-        <Button type="submit" className="mt-6">
-          Simpan
-        </Button>
       </form>
+
+      {/* Stock Notification Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={handleCancelModal}
+        title={modalContent.title}
+        message={modalContent.message}
+        onConfirm={handleConfirmSubmit}
+        confirmText="Ajukan"
+        cancelText="Batal"
+      />
     </div>
   );
 };

@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif; /* Using a modern sans-serif font */
+  background-color: var(--tw-colors-background);
+  color: var(--tw-colors-text);
+}
+
+/* Custom scrollbar for a sleek look (keeping for general good practice) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--tw-colors-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--tw-colors-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--tw-colors-accent);
+}

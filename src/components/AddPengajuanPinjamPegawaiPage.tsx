@@ -68,7 +68,10 @@ const AddPengajuanPinjamPegawaiPage: React.FC<AddPengajuanPinjamPegawaiPageProps
         />
 
         <div className="pt-4"> {/* Padding top for the button */}
-          <Button type="submit" className="w-full bg-secondary text-white py-3 rounded-xl shadow-md hover:bg-secondary/90 transition-colors active:scale-95">
+          <Button
+            type="submit"
+            className="w-full bg-gradient-to-r from-primary to-indigo-500 text-white py-3 rounded-xl shadow-lg hover:from-primary/90 hover:to-indigo-500/90 focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all active:scale-95"
+          >
             Simpan
           </Button>
         </div>

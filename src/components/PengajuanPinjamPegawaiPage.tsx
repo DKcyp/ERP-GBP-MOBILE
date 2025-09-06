@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Trash2, Plus } from 'lucide-react';
+import Modal from './Modal';
 
 interface PengajuanPinjamPegawaiPageProps {
   onBack: () => void;
@@ -157,31 +158,16 @@ const PengajuanPinjamPegawaiPage: React.FC<PengajuanPinjamPegawaiPageProps> = ({
         ))}
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedLoanToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-surface p-6 rounded-2xl shadow-lg max-w-xs w-full text-center">
-            <h3 className="text-xl font-bold text-text mb-4">Notifikasi</h3>
-            <p className="text-textSecondary mb-6">
-              Apakah anda yakin ingin menghapus Pengajuan Pinjaman <strong className="text-text">{selectedLoanToDelete.name}</strong> pada <strong className="text-text">{selectedLoanToDelete.tanggalPengajuan}</strong>?
-            </p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={cancelDelete}
-                className="bg-error text-white px-6 py-3 rounded-xl font-semibold hover:bg-error/90 transition-colors active:scale-95"
-              >
-                Batal
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors active:scale-95"
-              >
-                Hapus
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirmation Popup */}
+      <Modal
+        isOpen={showDeleteModal && !!selectedLoanToDelete}
+        onClose={cancelDelete}
+        title="Notifikasi"
+        message={selectedLoanToDelete ? `Apakah anda yakin ingin menghapus Pengajuan Pinjaman ${selectedLoanToDelete.name} pada ${selectedLoanToDelete.tanggalPengajuan}?` : ''}
+        onConfirm={confirmDelete}
+        confirmText="Hapus"
+        cancelText="Batal"
+      />
     </div>
   );
 };

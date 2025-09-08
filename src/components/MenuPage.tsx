@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  FileText, CheckCircle, Clock, Users, DollarSign, ClipboardCheck, LogOut, ArrowRight, ChevronDown, ChevronUp,
+  FileText, CheckCircle, Clock, Users, DollarSign, ClipboardCheck, LogOut, ArrowRight,
   Settings, BarChart, LayoutDashboard, Database, List, Ticket, Workflow, Wallet, FileEdit, Banknote, Send,
   ShoppingCart, FilePlus, Calendar
 } from 'lucide-react';
@@ -156,8 +156,6 @@ const iconMap: { [key: string]: React.ElementType } = {
   ClipboardCheck: ClipboardCheck,
   LogOut: LogOut,
   ArrowRight: ArrowRight,
-  ChevronDown: ChevronDown,
-  ChevronUp: ChevronUp,
   Settings: Settings,
   BarChart: BarChart,
   LayoutDashboard: LayoutDashboard,
@@ -179,41 +177,8 @@ const getIconComponent = (iconName: string): React.ElementType => {
 };
 
 const MenuPage: React.FC<MenuPageProps> = ({ onLogout, onNavigate }) => {
-  // --- UPDATED: Use a Set to track multiple open menus for nested navigation ---
-  const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
-
-  const toggleMenu = (menuName: string) => {
-    setOpenMenus(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(menuName)) {
-        newSet.delete(menuName);
-      } else {
-        newSet.add(menuName);
-      }
-      return newSet;
-    });
-  };
-
-  // Improve accessibility/keyboard usage and unify activation for touch/keyboard
-  const handleActivate = (hasChildren: boolean, name: string, page?: PageType) => {
-    if (hasChildren) {
-      toggleMenu(name);
-    } else if (page) {
-      onNavigate(page);
-    }
-  };
-
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLDivElement>,
-    hasChildren: boolean,
-    name: string,
-    page?: PageType
-  ) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleActivate(hasChildren, name, page);
-    }
-  };
+  // Active bottom-tab: PBG | Home | Timesheet | Pinjaman Pegawai | General
+  const [activeTab, setActiveTab] = useState<'PBG' | 'Home' | 'Timesheet' | 'Pinjaman Pegawai' | 'General'>('Home');
 
   const defaultRole = 'user'; // Example role, adjust as per your application's logic
   const generalMenuData = createGeneralMenu(defaultRole);
@@ -241,98 +206,95 @@ const MenuPage: React.FC<MenuPageProps> = ({ onLogout, onNavigate }) => {
       name: 'PBG',
       icon: FileText,
       description: 'Manage Performance Bank Guarantees.',
-      children: [ // Changed from subItems to children
+      children: [
         { name: 'PBG', icon: FileText, description: 'View and manage your PBGs.', page: 'pbg' },
         { name: 'Approval PBG', icon: CheckCircle, description: 'Approve or reject PBG requests.', page: 'approvalPbg' },
+        { name: 'Tambah PBG', icon: FilePlus, description: 'Add new PBG record.', page: 'addPbg' },
       ],
     },
-    { name: 'Timesheet', icon: Clock, description: 'Track and submit your work hours.', page: 'timesheet' },
+    {
+      name: 'Timesheet',
+      icon: Clock,
+      description: 'Track and submit your work hours.',
+      children: [
+        { name: 'Timesheet', icon: Clock, description: 'View timesheet list.', page: 'timesheet' },
+        { name: 'Tambah Timesheet', icon: FilePlus, description: 'Add a new timesheet.', page: 'addTimesheet' },
+      ],
+    },
     {
       name: 'Pinjaman Pegawai',
       icon: DollarSign,
       description: 'Manage employee loan applications.',
-      children: [ // Changed from subItems to children
+      children: [
         { name: 'Daftar Pinjam Pegawai', icon: Users, description: 'View list of employee loans.', page: 'daftarPinjamPegawai' },
         { name: 'Pengajuan Pinjam Pegawai', icon: DollarSign, description: 'Submit new employee loan requests.', page: 'pengajuanPinjamPegawai' },
         { name: 'Approval Pinjaman Pegawai', icon: ClipboardCheck, description: 'Approve or reject employee loan applications.', page: 'approvalPinjamanPegawai' },
+        { name: 'Tambah Pengajuan', icon: FilePlus, description: 'Add loan request.', page: 'addPengajuanPinjamPegawai' },
       ],
     },
-    // --- NEW: Add the single transformed General menu item here ---
+    // General is a container of many sections
     generalMenuItem,
   ];
 
-  // --- NEW: Recursive Menu Renderer Component ---
-  const renderMenuItem = (item: MenuItem, level: number = 0) => {
-    const hasChildren = item.children && item.children.length > 0;
-    const isOpen = openMenus.has(item.name); // Check if this specific menu is open
+  // Helpers: build grid items for active tab
+  const activeTabItems: MenuItem[] = useMemo(() => {
+    if (activeTab === 'Home') {
+      // Quick actions on Home
+      return [
+        { name: 'Timesheet', icon: Clock, description: 'View timesheet list.', page: 'timesheet' },
+        { name: 'Tambah Timesheet', icon: FilePlus, description: 'Add a new timesheet.', page: 'addTimesheet' },
+        { name: 'PBG', icon: FileText, description: 'View and manage your PBGs.', page: 'pbg' },
+        { name: 'Pengajuan Pinjam', icon: DollarSign, description: 'Ajukan pinjaman', page: 'pengajuanPinjamPegawai' },
+      ];
+    }
+    if (activeTab === 'General') {
+      // Flatten General sections into leaf items
+      const sections = generalMenuItem.children || [];
+      return sections.flatMap((sec) => sec.children || []);
+    }
+    const found = menuItems.find((m) => m.name === activeTab);
+    return found?.children || [];
+  }, [activeTab, generalMenuItem, menuItems]);
 
-    // Base styles for all menu items
-    const baseClasses = "rounded-xl shadow-card flex flex-col cursor-pointer transition-transform duration-200 mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
-    const hoverClasses = level === 0 ? "hover:scale-[1.01] active:scale-95" : "hover:bg-surface/80 active:scale-[0.98]";
-
-    // Dynamic padding and background based on level
-    const paddingClasses = level === 0 ? "p-6" : "p-4";
-    const bgClasses = level === 0 ? "bg-surface" : "bg-surface";
-
-    // Icon styling based on level
-    const iconBgClasses = level === 0 ? "bg-primary/10" : "bg-accent/10";
-    const iconTextClasses = level === 0 ? "text-primary" : "text-accent";
-    const iconSize = level === 0 ? 24 : 20;
-    const iconWrapperSize = level === 0 ? "w-12 h-12" : "w-10 h-10";
-    const iconMargin = level === 0 ? "mr-4" : "mr-3";
-
+  const GridItem: React.FC<{ item: MenuItem }> = ({ item }) => {
+    const Icon = item.icon;
     return (
-      <div key={item.name}>
-        <div
-          className={`${baseClasses} ${hoverClasses} ${paddingClasses} ${bgClasses}`}
-          role="button"
-          tabIndex={0}
-          aria-expanded={hasChildren ? isOpen : undefined}
-          aria-controls={hasChildren ? `submenu-${item.name}` : undefined}
-          aria-label={hasChildren ? `Toggle ${item.name} menu` : `Go to ${item.name}`}
-          onClick={() => handleActivate(hasChildren, item.name, item.page)}
-          onKeyDown={(e) => handleKeyDown(e, hasChildren, item.name, item.page)}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className={`${iconWrapperSize} ${iconBgClasses} rounded-full flex items-center justify-center ${iconMargin}`}>
-                <item.icon size={iconSize} className={iconTextClasses} />
-              </div>
-              <div>
-                <h3 className={`${level === 0 ? 'text-lg font-semibold' : 'text-md font-medium'} text-text`}>{item.name}</h3>
-                <p className={`${level === 0 ? 'text-sm' : 'text-xs'} text-textSecondary`}>{item.description}</p>
-              </div>
-            </div>
-            {hasChildren ? (
-              isOpen ? (
-                <ChevronUp size={20} className="text-textSecondary" />
-              ) : (
-                <ChevronDown size={20} className="text-textSecondary" />
-              )
-            ) : (
-              // Placeholder for alignment if no chevron
-              <div className="w-5 h-5"></div>
-            )}
-          </div>
+      <button
+        key={item.name}
+        onClick={() => item.page && onNavigate(item.page)}
+        className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-white shadow-card hover:shadow-md active:scale-95 transition-all"
+        aria-label={`Open ${item.name}`}
+      >
+        <div className="w-14 h-14 rounded-full flex items-center justify-center"
+             style={{ backgroundColor: 'rgba(59,130,246,0.12)' }}>
+          <Icon className="text-primary" size={22} />
         </div>
+        <span className="text-xs text-text text-center leading-tight">{item.name}</span>
+      </button>
+    );
+  };
 
-        {/* Render children if the menu is open and has children */}
-        {hasChildren && isOpen && (
-          <div
-            id={`submenu-${item.name}`}
-            className="flex flex-col gap-3 pl-6 pr-2 py-2 bg-surface/50 rounded-b-xl shadow-inner transition-all duration-300 ease-in-out"
-          >
-            {item.children?.map(child => renderMenuItem(child, level + 1))}
-          </div>
-        )}
-      </div>
+  const BottomTabButton: React.FC<{ name: 'PBG' | 'Home' | 'Timesheet' | 'Pinjaman Pegawai' | 'General'; Icon: React.ElementType }>
+    = ({ name, Icon }) => {
+    const isActive = activeTab === name;
+    return (
+      <button
+        onClick={() => setActiveTab(name)}
+        className="flex flex-col items-center justify-center flex-1 py-2"
+        aria-label={`Switch to ${name}`}
+      >
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isActive ? 'bg-primary' : 'bg-gray-200'}`}>
+          <Icon size={18} className={isActive ? 'text-white' : 'text-gray-500'} />
+        </div>
+        <span className={`text-[11px] mt-1 ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>{name}</span>
+      </button>
     );
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 flex flex-col items-center">
+    <div className="min-h-screen bg-background flex flex-col items-center pb-20">
       {/* Header */}
-      <div className="w-full max-w-sm bg-surface p-6 rounded-xl shadow-card flex items-center justify-between mb-8">
+      <div className="w-full max-w-sm bg-surface p-5 rounded-xl shadow-card flex items-center justify-between m-4">
         <div className="flex items-center">
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center mr-3">
             <ArrowRight size={20} className="text-white" />
@@ -352,10 +314,96 @@ const MenuPage: React.FC<MenuPageProps> = ({ onLogout, onNavigate }) => {
         </button>
       </div>
 
-      {/* Menu List */}
-      <div className="w-full max-w-sm flex flex-col gap-4">
-        {menuItems.map(item => renderMenuItem(item))}
-      </div>
+      {/* Home Dashboard */}
+      {activeTab === 'Home' && (
+        <div className="w-full max-w-sm px-4 space-y-4">
+          {/* Greeting / Banner */}
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl p-4 shadow-card">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                <LayoutDashboard size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold">Selamat datang!</h3>
+                <p className="text-xs text-white/90">Ringkasan aktivitas Anda hari ini</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white rounded-xl p-3 shadow-card text-center">
+              <div className="w-8 h-8 mx-auto rounded-full bg-blue-100 flex items-center justify-center mb-1">
+                <Clock size={16} className="text-blue-600" />
+              </div>
+              <div className="text-lg font-bold text-text">8h</div>
+              <div className="text-[10px] text-textSecondary">Timesheet</div>
+            </div>
+            <div className="bg-white rounded-xl p-3 shadow-card text-center">
+              <div className="w-8 h-8 mx-auto rounded-full bg-amber-100 flex items-center justify-center mb-1">
+                <ClipboardCheck size={16} className="text-amber-600" />
+              </div>
+              <div className="text-lg font-bold text-text">3</div>
+              <div className="text-[10px] text-textSecondary">Pending</div>
+            </div>
+            <div className="bg-white rounded-xl p-3 shadow-card text-center">
+              <div className="w-8 h-8 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-1">
+                <Calendar size={16} className="text-emerald-600" />
+              </div>
+              <div className="text-lg font-bold text-text">12</div>
+              <div className="text-[10px] text-textSecondary">Saldo Cuti</div>
+            </div>
+          </div>
+
+          {/* Title Quick Actions */}
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-text">Quick Actions</h4>
+          </div>
+        </div>
+      )}
+
+      {/* Grid / Sections for active tab */}
+      {activeTab === 'General' ? (
+        <div className="w-full max-w-sm px-4 mt-2 space-y-4">
+          {(generalMenuItem.children || []).map((section) => (
+            <div key={section.name} className="bg-surface rounded-xl shadow-card p-4">
+              <div className="flex items-center mb-3">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-2">
+                  {(() => {
+                    const Icon = section.icon;
+                    return <Icon size={16} className="text-gray-600" />;
+                  })()}
+                </div>
+                <h5 className="text-sm font-semibold text-text">{section.name}</h5>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {(section.children || []).map((child) => (
+                  <GridItem key={child.name} item={child} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="w-full max-w-sm px-4 mt-4">
+          <div className="grid grid-cols-3 gap-4">
+            {activeTabItems.map((item) => (
+              <GridItem key={item.name} item={item} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Tab Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+        <div className="mx-auto w-full max-w-sm flex">
+          <BottomTabButton name="PBG" Icon={FileText} />
+          <BottomTabButton name="Timesheet" Icon={Clock} />
+          <BottomTabButton name="Home" Icon={LayoutDashboard} />
+          <BottomTabButton name="Pinjaman Pegawai" Icon={Users} />
+          <BottomTabButton name="General" Icon={Settings} />
+        </div>
+      </nav>
     </div>
   );
 };
